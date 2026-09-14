@@ -1,0 +1,108 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * 1320 Legends CMS design system — "Pit-lane precision".
+ * Dark console surface, single ember accent, mono for data.
+ * All colors are oklch tokens; never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-raise: var(--raise);
+  --color-raise2: var(--raise2);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-mute: var(--mute);
+  --color-dim: var(--dim);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-card: var(--panel);
+  --color-card-foreground: var(--foreground);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--accent);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-muted: var(--raise);
+  --color-muted-foreground: var(--mute);
+  --color-popover: var(--panel);
+  --color-popover-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--accent-foreground);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --shadow-panel: 0 18px 40px -24px oklch(0 0 0 / 0.8);
+  --shadow-ember: 0 0 20px oklch(0.664 0.222 32 / 0.25);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.145 0.005 260);
+  --foreground: oklch(0.957 0.003 265);
+  --panel: oklch(0.185 0.006 260);
+  --raise: oklch(0.225 0.008 265);
+  --raise2: oklch(0.268 0.01 265);
+  --line: oklch(0.28 0.009 265);
+  --line2: oklch(0.35 0.013 265);
+  --mute: oklch(0.615 0.02 255);
+  --dim: oklch(0.43 0.018 255);
+  --accent: oklch(0.664 0.222 32);
+  --accent-foreground: oklch(0.145 0.005 260);
+  --destructive: oklch(0.6 0.21 20);
+  --glow: oklch(0.664 0.222 32 / 0.15);
+}
+
+@utility glow-spot {
+  background: radial-gradient(circle at center, var(--glow) 0%, transparent 70%);
+}
+
+@utility rise {
+  animation: cms-rise 0.6s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@keyframes cms-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: oklch(0.664 0.222 32 / 0.3);
+  }
+}

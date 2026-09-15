@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Panel, PageTitle, Shell, Stat, StatusPill } from "./Shell";
 
 export type SectionRow = {
@@ -26,6 +27,9 @@ export function SectionPage({
   columns,
   rows,
   stats,
+  filters,
+  panelMeta,
+  footer,
 }: {
   kicker: string;
   title: string;
@@ -34,6 +38,12 @@ export function SectionPage({
   columns: string[];
   rows: SectionRow[];
   stats: SectionStat[];
+  /** Optional filter-bar slot rendered above the table panel (search inputs, category pills, etc). */
+  filters?: ReactNode;
+  /** Optional override for the panel header meta text (defaults to "<n> ACTIVE RECORDS"). */
+  panelMeta?: string;
+  /** Optional content rendered below the table (e.g. pagination controls). */
+  footer?: ReactNode;
 }) {
   return (
     <Shell breadcrumb={breadcrumb}>
@@ -45,7 +55,13 @@ export function SectionPage({
         ))}
       </div>
 
-      <Panel title={tableTitle} meta={`${rows.length} ACTIVE RECORDS`} delay={250}>
+      {filters ? (
+        <div className="rise mb-6" style={{ animationDelay: "200ms" }}>
+          {filters}
+        </div>
+      ) : null}
+
+      <Panel title={tableTitle} meta={panelMeta ?? `${rows.length} ACTIVE RECORDS`} delay={250}>
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
@@ -84,6 +100,11 @@ export function SectionPage({
             </tbody>
           </table>
         </div>
+        {footer ? (
+          <div className="flex items-center justify-between border-t border-line bg-raise/10 px-6 py-4">
+            {footer}
+          </div>
+        ) : null}
       </Panel>
     </Shell>
   );

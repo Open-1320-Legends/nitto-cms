@@ -5,9 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * 1320 Legends CMS design system — "Pit-lane precision".
- * Dark console surface, single ember accent, mono for data.
- * All colors are oklch tokens; never hardcode colors in components.
+ * 1320 Legends CMS design system — matches the real game site/admin brand.
+ * Near-black surface, red/orange ember accent, condensed headings, mono telemetry.
+ * Tokens are hex/rgba to match the real site's CSS exactly; never hardcode colors in components.
  */
 
 @theme inline {
@@ -43,28 +43,29 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--accent-foreground);
 
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
+  --font-heading: "Arial Narrow", "Roboto Condensed", Impact, Haettenschweiler, sans-serif;
+  --font-mono: "Cascadia Mono", "Roboto Mono", Consolas, "Courier New", monospace;
 
-  --shadow-panel: 0 18px 40px -24px oklch(0 0 0 / 0.8);
-  --shadow-ember: 0 0 20px oklch(0.664 0.222 32 / 0.25);
+  --shadow-panel: 0 18px 40px -24px rgba(0, 0, 0, 0.8);
+  --shadow-ember: 0 0 20px rgba(255, 42, 31, 0.25);
 }
 
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.145 0.005 260);
-  --foreground: oklch(0.957 0.003 265);
-  --panel: oklch(0.185 0.006 260);
-  --raise: oklch(0.225 0.008 265);
-  --raise2: oklch(0.268 0.01 265);
-  --line: oklch(0.28 0.009 265);
-  --line2: oklch(0.35 0.013 265);
-  --mute: oklch(0.615 0.02 255);
-  --dim: oklch(0.43 0.018 255);
-  --accent: oklch(0.664 0.222 32);
-  --accent-foreground: oklch(0.145 0.005 260);
-  --destructive: oklch(0.6 0.21 20);
-  --glow: oklch(0.664 0.222 32 / 0.15);
+  --background: #050201;
+  --foreground: #fff7ef;
+  --panel: rgba(18, 7, 5, 0.94);
+  --raise: rgba(31, 12, 8, 0.9);
+  --raise2: rgba(45, 18, 12, 0.9);
+  --line: rgba(255, 255, 255, 0.14);
+  --line2: rgba(255, 122, 64, 0.36);
+  --mute: rgba(255, 231, 214, 0.74);
+  --dim: rgba(255, 231, 214, 0.54);
+  --accent: #ff6a2a;
+  --accent-foreground: #090403;
+  --destructive: #ff2a1f;
+  --glow: rgba(255, 106, 42, 0.18);
 }
 
 @utility glow-spot {
@@ -97,12 +98,17 @@
 
   body {
     background-color: var(--color-background);
+    background-image:
+      radial-gradient(circle at top left, rgba(255, 106, 42, 0.18), transparent 28rem),
+      radial-gradient(circle at top right, rgba(245, 178, 94, 0.12), transparent 24rem),
+      linear-gradient(180deg, #090201, #100404 18%, #050201 100%);
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background: oklch(0.664 0.222 32 / 0.3);
+    background: rgba(255, 42, 31, 0.3);
   }
 }

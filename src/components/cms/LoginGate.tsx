@@ -27,13 +27,17 @@ export function LoginGate() {
         className="relative z-10 w-full max-w-sm rounded-xl border border-line bg-panel/60 p-8 shadow-[var(--shadow-panel)] backdrop-blur-sm"
       >
         <div className="mb-8 flex items-center gap-3">
-          <div className="grid size-8 place-items-center rounded bg-accent font-mono text-[13px] leading-none font-bold text-accent-foreground shadow-[var(--shadow-ember)]">
-            1320
-          </div>
+          <img
+            src="/brand/1320-legends-logo.png"
+            alt="1320 Legends"
+            className="h-8 w-auto shrink-0"
+          />
           <div className="leading-tight">
-            <div className="text-[14px] font-bold tracking-tight">1320 LEGENDS</div>
+            <div className="font-heading text-[15px] font-bold tracking-tight uppercase">
+              1320 Legends
+            </div>
             <div className="font-mono text-[10px] tracking-[0.2em] text-accent/80 uppercase">
-              Stage II Console
+              Private Admin
             </div>
           </div>
         </div>

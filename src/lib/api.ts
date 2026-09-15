@@ -140,6 +140,88 @@ export const tuningApi = {
     ),
 };
 
+// ---- CMS2 catalog (structured, category/car/engine-aware admin API) ----
+export type Cms2Category = { id: number; name: string };
+
+export type Cms2PartRow = {
+  pid: number;
+  name: string;
+  brand: string;
+  model: string;
+  category: string;
+  grade: string;
+  hp: number;
+  tq: number;
+  wt: number;
+  priceCash: number;
+  pricePoints: number;
+};
+
+export type Cms2EngineRow = {
+  id: number;
+  name: string;
+  hp: number;
+  torque: number;
+  weight: number;
+  drivetrain: string;
+};
+
+export type Cms2EngineDetail = Cms2EngineRow & {
+  gears: number;
+  redLine: number;
+};
+
+// Raw per-engine attached-part shape from enginePartsForCatalogId() in parts.mjs -- short,
+// XML-oriented keys (n/mn/hp/tq/wt/p/pp/etc), not the same shape as Cms2PartRow above.
+export type Cms2EnginePart = {
+  pid: number;
+  i: string;
+  pi: string;
+  ci: string;
+  pcid: string;
+  categoryID: string;
+  t: string;
+  pt: string;
+  n: string;
+  p: string;
+  pp: string;
+  g: string;
+  di: string;
+  pdi: string;
+  b: string;
+  bn: string;
+  mn: string;
+  l: string;
+  mo: string;
+  hp: string;
+  tq: string;
+  wt: string;
+  cc: string;
+  compat: unknown;
+};
+
+export const cms2Api = {
+  categories: () => api.get<{ ok: true; categories: Cms2Category[] }>("/admin/cms2/categories"),
+  parts: ({
+    query = "",
+    category = "",
+    page = 1,
+    pageSize = 25,
+  }: { query?: string; category?: string; page?: number; pageSize?: number } = {}) =>
+    api.get<{ ok: true; items: Cms2PartRow[]; total: number; page: number; pageSize: number }>(
+      `/admin/cms2/parts?query=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}&page=${page}&pageSize=${pageSize}`,
+    ),
+  part: (pid: number) => api.get<{ ok: true; part: unknown }>(`/admin/cms2/parts/${pid}`),
+  engines: ({ query = "" }: { query?: string } = {}) =>
+    api.get<{ ok: true; items: Cms2EngineRow[]; total: number }>(
+      `/admin/cms2/engines?query=${encodeURIComponent(query)}`,
+    ),
+  engine: (id: number) =>
+    api.get<{ ok: true; engine: Cms2EngineDetail }>(`/admin/cms2/engines/${id}`),
+  engineParts: (id: number) =>
+    api.get<{ ok: true; parts: Cms2EnginePart[] }>(`/admin/cms2/engines/${id}/parts`),
+};
+
 // ---- Action approvals ----
 export type ApprovalEntry = {
   id: string;

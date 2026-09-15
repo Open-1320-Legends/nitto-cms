@@ -15,3 +15,63 @@ export function parseXmlElements(xml: string | undefined, tag: string): Record<s
     return [];
   }
 }
+
+function escapeXmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+/** Serialize plain attribute maps back into a flat `<tag a='1' b='2'/>` element list, wrapped in
+ *  a single root of the same tag name -- the exact shape catalog files like wheels-500.xml use
+ *  (`<p><p i='1' .../><p i='2' .../></p>`). Round-trips whatever attribute keys each record
+ *  happens to carry, in the order Object.entries gives them (insertion order, which
+ *  parseXmlElements preserves from the source attributes) -- no schema assumed beyond
+ *  "flat string attributes on one repeated element". */
+export function serializeXmlElements(records: Record<string, string>[], tag: string): string {
+  const children = records
+    .map((rec) => {
+      const attrs = Object.entries(rec)
+        .map(([k, v]) => `${k}='${escapeXmlAttr(v)}'`)
+        .join(" ");
+      return `<${tag} ${attrs}/>`;
+    })
+    .join("");
+  return `<${tag}>${children}</${tag}>`;
+}
+
+/** Patch one element's attributes in place and reserialize the WHOLE document, preserving
+ *  everything serializeXmlElements can't: nested children (e.g. showroom-100.xml's <c> car
+ *  entries each carry a <p cd='..'/> list of paint-color options), other sibling elements,
+ *  attribute ordering on untouched elements, etc. Use this instead of
+ *  parseXmlElements+serializeXmlElements whenever the records being edited have child content --
+ *  the flat serializer would silently drop it.
+ *
+ *  `idAttr`/`idValue` identify the one element to patch (e.g. idAttr="i", idValue="28" for a
+ *  showroom car). Only the FIRST matching element is patched. Returns the original xml unchanged
+ *  if no element matches or on a parse error, so a caller can detect a no-op by comparing output
+ *  to input. */
+export function updateXmlElementAttrs(
+  xml: string,
+  tag: string,
+  idAttr: string,
+  idValue: string,
+  nextAttrs: Record<string, string>,
+): string {
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") return xml;
+  try {
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    if (doc.querySelector("parsererror")) return xml;
+    const target = Array.from(doc.getElementsByTagName(tag)).find(
+      (el) => el.getAttribute(idAttr) === idValue,
+    );
+    if (!target) return xml;
+    for (const [k, v] of Object.entries(nextAttrs)) target.setAttribute(k, v);
+    return new XMLSerializer().serializeToString(doc);
+  } catch {
+    return xml;
+  }
+}

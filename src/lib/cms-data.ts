@@ -26,7 +26,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Engines", to: "/engines", code: "CP-05" },
       { label: "OEM Paints", to: "/paints", code: "CP-06" },
       { label: "Parts", to: "/parts", code: "CP-07" },
-      { label: "Engine Parts", to: "/engine-parts", code: "CP-08" },
+      { label: "Wheels & Rims", to: "/wheels", code: "CP-08" },
+      { label: "Engine Parts", to: "/engine-parts", code: "CP-09" },
     ],
   },
   {

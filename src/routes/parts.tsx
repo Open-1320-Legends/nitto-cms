@@ -8,6 +8,7 @@ import { cms2Api, cmsApi, ApiError, type Cms2PartRow } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { useCmsFileList, useCmsFileById } from "@/lib/useCmsFile";
 import { parseXmlElements, serializeXmlElements } from "@/lib/parseXmlElements";
+import { catalogFieldTitle } from "@/lib/catalogFieldGlossary";
 
 export const Route = createFileRoute("/parts")({
   head: () => ({
@@ -126,6 +127,47 @@ function PartPriceEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => vo
   );
 }
 
+// ---- Lock/unlock toggle for one part -- the REAL purchase-block flag (lk), not decorative. ----
+// parts.mjs's buypart hard-rejects any pid with lk='1', shared enforcement for both
+// parts-full.xml and wheels-500.xml entries (same handler). PUT /api/admin/cms2/parts/:pid
+// { part: { locked: 0 | 1 } } (confirmed live) -- NOT a boolean, see Cms2PartPatch's comment.
+function PartLockToggle({ pid, locked }: { pid: number; locked: boolean }) {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
+
+  const toggle = async () => {
+    setSaving(true);
+    try {
+      await cms2Api.savePart(
+        pid,
+        { locked: locked ? 0 : 1 },
+        locked ? "Unlocked via admin console" : "Locked via admin console",
+      );
+      await queryClient.invalidateQueries({ queryKey: ["cms2-parts"] });
+      toast.success(locked ? "Part unlocked." : "Part locked.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.reason || err.message : "Save failed.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={() => void toggle()}
+      disabled={saving}
+      title={locked ? "Unlock this part for purchase" : "Block this part from purchase"}
+      className={
+        locked
+          ? "h-8 rounded border border-accent/40 bg-accent/10 px-4 font-mono text-[10px] tracking-widest text-accent uppercase transition-colors hover:bg-accent/20 disabled:opacity-50"
+          : "h-8 rounded border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground disabled:opacity-50"
+      }
+    >
+      {saving ? "..." : locked ? "Locked" : "Unlocked"}
+    </button>
+  );
+}
+
 // ---- Wheels/rims catalog: per-record, per-field editor over wheels-500.xml ----
 // Confirmed by reading parts.mjs: wheels/tires live in a SEPARATE file, wheels-500.xml, not
 // parts-full.xml -- partsCatalogEntries()/updatePartsCatalogEntry() (and so cms2/parts above)
@@ -167,7 +209,10 @@ function WheelRecordEditor({
       <div className="grid grid-cols-4 gap-4">
         {Object.entries(fields).map(([key, value]) => (
           <div key={key}>
-            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+            <label
+              title={catalogFieldTitle(key)}
+              className="mb-2 block cursor-help font-mono text-[10px] tracking-[0.2em] text-dim uppercase underline decoration-dotted decoration-dim/50 underline-offset-2"
+            >
               {key}
             </label>
             <input
@@ -318,8 +363,29 @@ function WheelsEditor() {
                           ID: {rec[WHEEL_ID_KEY]} // CATEGORY: {rec.pi ?? "—"}
                         </div>
                       </div>
-                      <div className="font-mono text-[11px] text-mute">
-                        {rec.p ? `$${rec.p}` : "—"} {rec.pp ? `/ ${rec.pp} pts` : ""}
+                      <div className="flex items-center gap-3">
+                        <div className="font-mono text-[11px] text-mute">
+                          {rec.p ? `$${rec.p}` : "—"} {rec.pp ? `/ ${rec.pp} pts` : ""}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void save({ ...rec, lk: rec.lk === "1" ? "0" : "1" }, "");
+                          }}
+                          disabled={saving}
+                          title={
+                            rec.lk === "1"
+                              ? "Unlock this wheel for purchase"
+                              : "Block this wheel from purchase"
+                          }
+                          className={
+                            rec.lk === "1"
+                              ? "h-8 shrink-0 rounded border border-accent/40 bg-accent/10 px-4 font-mono text-[10px] tracking-widest text-accent uppercase transition-colors hover:bg-accent/20 disabled:opacity-50"
+                              : "h-8 shrink-0 rounded border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground disabled:opacity-50"
+                          }
+                        >
+                          {rec.lk === "1" ? "Locked" : "Unlocked"}
+                        </button>
                       </div>
                     </div>
                     {editingId === rec[WHEEL_ID_KEY] ? (
@@ -503,15 +569,18 @@ function PartsPage() {
                       {p.priceCash ? `$${p.priceCash.toLocaleString()}` : "—"}
                     </td>
                     <td className="px-4 py-5">
-                      <StatusPill status="deployed" />
+                      <StatusPill status={p.locked ? "locked" : "deployed"} />
                     </td>
                     <td className="px-6 py-5 text-right">
-                      <button
-                        onClick={() => setEditingPid(editingPid === p.pid ? null : p.pid)}
-                        className="h-8 rounded border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground"
-                      >
-                        {editingPid === p.pid ? "Close" : "Edit price"}
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <PartLockToggle pid={p.pid} locked={p.locked} />
+                        <button
+                          onClick={() => setEditingPid(editingPid === p.pid ? null : p.pid)}
+                          className="h-8 rounded border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground"
+                        >
+                          {editingPid === p.pid ? "Close" : "Edit price"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   {editingPid === p.pid ? (

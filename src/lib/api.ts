@@ -205,6 +205,9 @@ export type Cms2PartRow = {
   wt: number;
   priceCash: number;
   pricePoints: number;
+  // Real per-part purchase lock (parts.mjs's buypart hard-blocks pid when this is set -- shared
+  // enforcement for both parts-full.xml and wheels-500.xml entries, same handler for both).
+  locked: boolean;
 };
 
 export type Cms2EngineRow = {
@@ -292,6 +295,11 @@ export type Cms2PartPatch = Partial<{
   priceCash: number;
   pricePoints: number;
   grade: string;
+  // 0 | 1, NOT boolean: the backend writes this straight into the lk='..' XML attribute with no
+  // type coercion (setPartXmlAttr does a raw template-literal interpolation) -- sending a JS
+  // boolean would literally write lk='true', and Number("true") !== 1 means buypart's lock check
+  // would silently never trigger.
+  locked: 0 | 1;
 }>;
 
 export type GlobalUnlocks = { lockedCatalogIds: number[]; lockedPartCategories: number[] };

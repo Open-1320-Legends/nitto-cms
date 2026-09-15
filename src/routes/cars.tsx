@@ -6,6 +6,7 @@ import { Panel, PageTitle, Shell, Stat, StatusPill } from "@/components/cms/Shel
 import { SectionLoading, SectionError } from "@/components/cms/DataState";
 import { useCmsFileList, useCmsFileById } from "@/lib/useCmsFile";
 import { parseXmlElements, updateXmlElementAttrs } from "@/lib/parseXmlElements";
+import { catalogFieldTitle } from "@/lib/catalogFieldGlossary";
 import { cmsApi, tuningApi, ApiError, type TuningCarItem, type TuningCarDetail } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 
@@ -276,7 +277,10 @@ function CarShowroomFieldsEditor({
         <div className="grid grid-cols-6 gap-3">
           {Object.entries(fields).map(([key, value]) => (
             <div key={key}>
-              <label className="mb-1 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              <label
+                title={catalogFieldTitle(key)}
+                className="mb-1 block cursor-help font-mono text-[10px] tracking-[0.2em] text-dim uppercase underline decoration-dotted decoration-dim/50 underline-offset-2"
+              >
                 {key}
               </label>
               <input

@@ -22,6 +22,7 @@ import { Route as PartsRouteImport } from './routes/parts'
 import { Route as TuneLabRouteImport } from './routes/tune-lab'
 import { Route as TuningWorkbenchRouteImport } from './routes/tuning-workbench'
 import { Route as UnlocksRouteImport } from './routes/unlocks'
+import { Route as WheelsRouteImport } from './routes/wheels'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -88,6 +89,11 @@ const UnlocksRoute = UnlocksRouteImport.update({
   path: '/unlocks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WheelsRoute = WheelsRouteImport.update({
+  id: '/wheels',
+  path: '/wheels',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/tune-lab': typeof TuneLabRoute
   '/tuning-workbench': typeof TuningWorkbenchRoute
   '/unlocks': typeof UnlocksRoute
+  '/wheels': typeof WheelsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/tune-lab': typeof TuneLabRoute
   '/tuning-workbench': typeof TuningWorkbenchRoute
   '/unlocks': typeof UnlocksRoute
+  '/wheels': typeof WheelsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/tune-lab': typeof TuneLabRoute
   '/tuning-workbench': typeof TuningWorkbenchRoute
   '/unlocks': typeof UnlocksRoute
+  '/wheels': typeof WheelsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/tune-lab'
     | '/tuning-workbench'
     | '/unlocks'
+    | '/wheels'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/tune-lab'
     | '/tuning-workbench'
     | '/unlocks'
+    | '/wheels'
   id:
     | '__root__'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/tune-lab'
     | '/tuning-workbench'
     | '/unlocks'
+    | '/wheels'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   TuneLabRoute: typeof TuneLabRoute
   TuningWorkbenchRoute: typeof TuningWorkbenchRoute
   UnlocksRoute: typeof UnlocksRoute
+  WheelsRoute: typeof WheelsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UnlocksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wheels': {
+      id: '/wheels'
+      path: '/wheels'
+      fullPath: '/wheels'
+      preLoaderRoute: typeof WheelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   TuneLabRoute: TuneLabRoute,
   TuningWorkbenchRoute: TuningWorkbenchRoute,
   UnlocksRoute: UnlocksRoute,
+  WheelsRoute: WheelsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

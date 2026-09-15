@@ -33,12 +33,21 @@ function decodeEntities(s: string) {
     .replace(/&#39;/g, "'");
 }
 
-// ---- Inline price editor for one part row ----
-// PUT /api/admin/cms2/parts/:pid { part: { priceCash, pricePoints }, reason } (updatePartsCatalogEntry
-// in parts.mjs, confirmed live) -- writes straight into parts-full.xml, the same file the live
-// shop reads.
-function PartPriceEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => void }) {
+// ---- Full field editor for one part row (not just price) ----
+// PUT /api/admin/cms2/parts/:pid { part: {...}, reason } (updatePartsCatalogEntry in parts.mjs,
+// confirmed live) -- writes straight into parts-full.xml, the same file the live shop reads.
+// Covers every field PART_FIELD_TO_ATTR actually accepts: name/model/brand/grade plus the
+// hp/torque/weight DELTAS this part adds (not the car's totals), and price. `locked` is handled
+// separately by PartLockToggle below, not duplicated here.
+function PartFieldEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => void }) {
   const queryClient = useQueryClient();
+  const [name, setName] = useState(part.name);
+  const [model, setModel] = useState(part.model);
+  const [brand, setBrand] = useState(part.brand);
+  const [grade, setGrade] = useState(part.grade);
+  const [hp, setHp] = useState(String(part.hp));
+  const [tq, setTq] = useState(String(part.tq));
+  const [wt, setWt] = useState(String(part.wt));
   const [priceCash, setPriceCash] = useState(String(part.priceCash));
   const [pricePoints, setPricePoints] = useState(String(part.pricePoints));
   const [reason, setReason] = useState("");
@@ -53,11 +62,21 @@ function PartPriceEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => vo
     try {
       await cms2Api.savePart(
         part.pid,
-        { priceCash: Number(priceCash) || 0, pricePoints: Number(pricePoints) || 0 },
+        {
+          name,
+          model,
+          brand,
+          grade,
+          horsepowerDelta: Number(hp) || 0,
+          torqueDelta: Number(tq) || 0,
+          weightDelta: Number(wt) || 0,
+          priceCash: Number(priceCash) || 0,
+          pricePoints: Number(pricePoints) || 0,
+        },
         reason.trim(),
       );
       await queryClient.invalidateQueries({ queryKey: ["cms2-parts"] });
-      toast.success(`Saved price for ${part.name || `part ${part.pid}`}.`);
+      toast.success(`Saved ${name || `part ${part.pid}`}.`);
       onDone();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.reason || err.message : "Save failed.");
@@ -69,30 +88,103 @@ function PartPriceEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => vo
   return (
     <tr className="bg-raise/10">
       <td colSpan={5} className="px-6 py-5">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div>
             <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
-              Cash price
+              Name
             </label>
             <input
-              type="number"
-              value={priceCash}
-              onChange={(e) => setPriceCash(e.target.value)}
-              className="h-10 w-full rounded border border-line bg-background px-4 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-10 w-full rounded border border-line bg-background px-3 text-[13px] outline-none transition-all focus:border-accent/50"
             />
           </div>
           <div>
             <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
-              Points price
+              Model
             </label>
             <input
-              type="number"
-              value={pricePoints}
-              onChange={(e) => setPricePoints(e.target.value)}
-              className="h-10 w-full rounded border border-line bg-background px-4 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="h-10 w-full rounded border border-line bg-background px-3 text-[13px] outline-none transition-all focus:border-accent/50"
             />
           </div>
           <div>
+            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              Brand
+            </label>
+            <input
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              className="h-10 w-full rounded border border-line bg-background px-3 text-[13px] outline-none transition-all focus:border-accent/50"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              Grade
+            </label>
+            <input
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              placeholder="S / A / B / C"
+              className="h-10 w-full rounded border border-line bg-background px-3 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              HP gain
+            </label>
+            <input
+              type="number"
+              value={hp}
+              onChange={(e) => setHp(e.target.value)}
+              className="h-10 w-full rounded border border-line bg-background px-3 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              Torque gain
+            </label>
+            <input
+              type="number"
+              value={tq}
+              onChange={(e) => setTq(e.target.value)}
+              className="h-10 w-full rounded border border-line bg-background px-3 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              Weight delta
+            </label>
+            <input
+              type="number"
+              value={wt}
+              onChange={(e) => setWt(e.target.value)}
+              className="h-10 w-full rounded border border-line bg-background px-3 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+            />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
+              Cash / points price
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={priceCash}
+                onChange={(e) => setPriceCash(e.target.value)}
+                className="h-10 w-full rounded border border-line bg-background px-3 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+              />
+              <input
+                type="number"
+                value={pricePoints}
+                onChange={(e) => setPricePoints(e.target.value)}
+                className="h-10 w-full rounded border border-line bg-background px-3 font-mono text-[13px] outline-none transition-all focus:border-accent/50"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex items-end justify-between gap-4">
+          <div className="w-96">
             <label className="mb-2 block font-mono text-[10px] tracking-[0.2em] text-dim uppercase">
               Reason (required, audit-logged)
             </label>
@@ -100,10 +192,10 @@ function PartPriceEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => vo
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. balance pass"
-              className="h-10 w-full rounded border border-line bg-background px-4 text-[13px] outline-none transition-all focus:border-accent/50"
+              className="h-10 w-full rounded border border-line bg-background px-3 text-[13px] outline-none transition-all focus:border-accent/50"
             />
           </div>
-          <div className="col-span-3 flex justify-end gap-2">
+          <div className="flex gap-2">
             <button
               onClick={onDone}
               className="h-9 rounded border border-line px-5 font-mono text-[11px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground"
@@ -115,7 +207,7 @@ function PartPriceEditor({ part, onDone }: { part: Cms2PartRow; onDone: () => vo
               disabled={saving}
               className="h-9 rounded bg-accent px-5 text-[11px] font-bold tracking-widest text-accent-foreground uppercase transition-all hover:brightness-125 disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save price"}
+              {saving ? "Saving..." : "Save part"}
             </button>
           </div>
         </div>
@@ -330,13 +422,13 @@ function PartsPage() {
                           onClick={() => setEditingPid(editingPid === p.pid ? null : p.pid)}
                           className="h-8 rounded border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground"
                         >
-                          {editingPid === p.pid ? "Close" : "Edit price"}
+                          {editingPid === p.pid ? "Close" : "Edit part"}
                         </button>
                       </div>
                     </td>
                   </tr>
                   {editingPid === p.pid ? (
-                    <PartPriceEditor
+                    <PartFieldEditor
                       key={`${p.pid}-editor`}
                       part={p}
                       onDone={() => setEditingPid(null)}

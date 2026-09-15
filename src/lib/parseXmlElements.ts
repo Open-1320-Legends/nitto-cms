@@ -32,15 +32,31 @@ function escapeXmlAttr(value: string): string {
  *  parseXmlElements preserves from the source attributes) -- no schema assumed beyond
  *  "flat string attributes on one repeated element". */
 export function serializeXmlElements(records: Record<string, string>[], tag: string): string {
+  return serializeXmlChildren(records, tag, tag);
+}
+
+/** Same as serializeXmlElements, but for files whose root and child tags differ (e.g.
+ *  paints.xml: `<n id='getpaints'><p l='..' c='..'/>...</n>` -- root "n", children "p"). The
+ *  root's own attributes (if any) aren't preserved here since none of this app's editors touch
+ *  them; pass rootAttrs to keep them if that ever changes. */
+export function serializeXmlChildren(
+  records: Record<string, string>[],
+  rootTag: string,
+  childTag: string,
+  rootAttrs: Record<string, string> = {},
+): string {
   const children = records
     .map((rec) => {
       const attrs = Object.entries(rec)
         .map(([k, v]) => `${k}='${escapeXmlAttr(v)}'`)
         .join(" ");
-      return `<${tag} ${attrs}/>`;
+      return `<${childTag} ${attrs}/>`;
     })
     .join("");
-  return `<${tag}>${children}</${tag}>`;
+  const rootAttrStr = Object.entries(rootAttrs)
+    .map(([k, v]) => ` ${k}='${escapeXmlAttr(v)}'`)
+    .join("");
+  return `<${rootTag}${rootAttrStr}>${children}</${rootTag}>`;
 }
 
 /** Patch one element's attributes in place and reserialize the WHOLE document, preserving

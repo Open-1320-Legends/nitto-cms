@@ -119,6 +119,7 @@ function WheelRecordEditor({
 function WheelsPage() {
   const { status } = useAuth();
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -132,11 +133,20 @@ function WheelsPage() {
     [file.data?.content],
   );
 
+  // Wheels have no dedicated category-name endpoint like parts.mjs's partCategories() -- the
+  // category ids (pi) are real, but there's nothing that maps them to a human name for this
+  // file, so the filter pills are just the distinct raw ids actually present in the data.
+  const categories = useMemo(
+    () => Array.from(new Set(records.map((r) => r.pi).filter(Boolean))).sort(),
+    [records],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return records.slice(0, 50);
-    return records.filter((r) => wheelLabel(r).toLowerCase().includes(q)).slice(0, 50);
-  }, [records, search]);
+    let base = category ? records.filter((r) => r.pi === category) : records;
+    if (q) base = base.filter((r) => wheelLabel(r).toLowerCase().includes(q));
+    return base.slice(0, 50);
+  }, [records, search, category]);
 
   const lockedCount = useMemo(() => records.filter((r) => r.lk === "1").length, [records]);
 
@@ -209,8 +219,33 @@ function WheelsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search wheels by name/brand/model..."
-                className="h-10 w-full rounded border border-line bg-background px-4 text-[13px] outline-none transition-all focus:border-accent/50"
+                className="mb-4 h-10 w-full rounded border border-line bg-background px-4 text-[13px] outline-none transition-all focus:border-accent/50"
               />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setCategory("")}
+                  className={
+                    !category
+                      ? "h-8 rounded-full bg-accent px-4 font-mono text-[10px] font-bold tracking-widest text-accent-foreground uppercase"
+                      : "h-8 rounded-full border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground"
+                  }
+                >
+                  All
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategory(cat)}
+                    className={
+                      category === cat
+                        ? "h-8 rounded-full bg-accent px-4 font-mono text-[10px] font-bold tracking-widest text-accent-foreground uppercase"
+                        : "h-8 rounded-full border border-line px-4 font-mono text-[10px] tracking-widest text-mute uppercase transition-colors hover:bg-raise hover:text-foreground"
+                    }
+                  >
+                    Category {cat}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="divide-y divide-line border-t border-line">
               {filtered.map((rec) => (

@@ -42,3 +42,36 @@ export function serializeXmlElements(records: Record<string, string>[], tag: str
     .join("");
   return `<${tag}>${children}</${tag}>`;
 }
+
+/** Patch one element's attributes in place and reserialize the WHOLE document, preserving
+ *  everything serializeXmlElements can't: nested children (e.g. showroom-100.xml's <c> car
+ *  entries each carry a <p cd='..'/> list of paint-color options), other sibling elements,
+ *  attribute ordering on untouched elements, etc. Use this instead of
+ *  parseXmlElements+serializeXmlElements whenever the records being edited have child content --
+ *  the flat serializer would silently drop it.
+ *
+ *  `idAttr`/`idValue` identify the one element to patch (e.g. idAttr="i", idValue="28" for a
+ *  showroom car). Only the FIRST matching element is patched. Returns the original xml unchanged
+ *  if no element matches or on a parse error, so a caller can detect a no-op by comparing output
+ *  to input. */
+export function updateXmlElementAttrs(
+  xml: string,
+  tag: string,
+  idAttr: string,
+  idValue: string,
+  nextAttrs: Record<string, string>,
+): string {
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") return xml;
+  try {
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    if (doc.querySelector("parsererror")) return xml;
+    const target = Array.from(doc.getElementsByTagName(tag)).find(
+      (el) => el.getAttribute(idAttr) === idValue,
+    );
+    if (!target) return xml;
+    for (const [k, v] of Object.entries(nextAttrs)) target.setAttribute(k, v);
+    return new XMLSerializer().serializeToString(doc);
+  } catch {
+    return xml;
+  }
+}

@@ -15,3 +15,30 @@ export function parseXmlElements(xml: string | undefined, tag: string): Record<s
     return [];
   }
 }
+
+function escapeXmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+/** Serialize plain attribute maps back into a flat `<tag a='1' b='2'/>` element list, wrapped in
+ *  a single root of the same tag name -- the exact shape catalog files like wheels-500.xml use
+ *  (`<p><p i='1' .../><p i='2' .../></p>`). Round-trips whatever attribute keys each record
+ *  happens to carry, in the order Object.entries gives them (insertion order, which
+ *  parseXmlElements preserves from the source attributes) -- no schema assumed beyond
+ *  "flat string attributes on one repeated element". */
+export function serializeXmlElements(records: Record<string, string>[], tag: string): string {
+  const children = records
+    .map((rec) => {
+      const attrs = Object.entries(rec)
+        .map(([k, v]) => `${k}='${escapeXmlAttr(v)}'`)
+        .join(" ");
+      return `<${tag} ${attrs}/>`;
+    })
+    .join("");
+  return `<${tag}>${children}</${tag}>`;
+}

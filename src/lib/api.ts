@@ -129,6 +129,47 @@ export type TuningPartItem = {
   pp: number;
 };
 
+// Full catalog-car record as returned by GET /admin/tuning/cars/:id (features/cms/tuning-catalog.mjs
+// getTuningCatalogItem -> raceCatalogEntry, i.e. data/catalog/car-race-data.json). This is the
+// catalog the live economy actually charges from (economy.mjs's buycar reads carInfo(catalogId)
+// .moneyPrice/.pointPrice) -- distinct from showroom-100.xml's cosmetic display price used on the
+// /cars and /dealership pages above.
+export type TuningCarDetail = {
+  id: number;
+  name: string;
+  weight: number;
+  redLine: number;
+  hp: number;
+  torqueCurve: number[];
+  gears: Record<string, number>;
+  drivetrain: string;
+  layout: string;
+  moneyPrice: number;
+  pointPrice: number;
+  defaultPaint: string;
+  year: number | string;
+};
+
+// Fields EDITABLE_RACE_FIELDS (catalog-car.mjs) accepts in a PATCH -- send only what changed, the
+// backend merges it into the existing entry.
+export type TuningCarPatch = Partial<
+  Pick<
+    TuningCarDetail,
+    | "name"
+    | "weight"
+    | "redLine"
+    | "hp"
+    | "torqueCurve"
+    | "gears"
+    | "drivetrain"
+    | "layout"
+    | "moneyPrice"
+    | "pointPrice"
+    | "defaultPaint"
+    | "year"
+  >
+>;
+
 export const tuningApi = {
   searchCars: (query = "", limit = 100) =>
     api.get<{ ok: true; type: "cars"; items: TuningCarItem[]; count: number }>(
@@ -138,6 +179,15 @@ export const tuningApi = {
     api.get<{ ok: true; type: "parts"; items: TuningPartItem[]; count: number }>(
       `/admin/tuning?type=parts&query=${encodeURIComponent(query)}&limit=${limit}`,
     ),
+  // GET/POST /admin/tuning/cars/:id -- the real per-field catalog-car editor (see
+  // saveTuningCatalogItem in tuning-catalog.mjs). POST body is a merge/patch: only send the
+  // fields being changed, `reason` is required and lands in the AdminAuditLog row.
+  getCar: (id: number) => api.get<{ ok: true; car: TuningCarDetail }>(`/admin/tuning/cars/${id}`),
+  saveCar: (id: number, patch: TuningCarPatch, reason: string) =>
+    api.post<{ ok: true; car: TuningCarDetail }>(`/admin/tuning/cars/${id}`, {
+      car: patch,
+      reason,
+    }),
 };
 
 // ---- CMS2 catalog (structured, category/car/engine-aware admin API) ----
@@ -200,6 +250,52 @@ export type Cms2EnginePart = {
   compat: unknown;
 };
 
+// Raw per-part XML-attribute shape from GET /admin/cms2/parts/:pid (partsCatalogEntry ->
+// parsePartXmlAttrs -- confirmed live against the backend: every value comes back as a string,
+// even the numeric ones, since these are XML attribute values).
+export type Cms2PartDetail = {
+  pid: number;
+  i: string;
+  pi: string;
+  ci: string;
+  pcid: string;
+  categoryID: string;
+  t: string;
+  pt: string;
+  n: string;
+  p: string;
+  pp: string;
+  g: string;
+  di: string;
+  pdi: string;
+  b: string;
+  bn: string;
+  mn: string;
+  l: string;
+  mo: string;
+  hp: string;
+  tq: string;
+  wt: string;
+  cc: string;
+};
+
+// Fields PART_FIELD_TO_ATTR (parts.mjs) accepts in a PATCH -- these are the FIELD names the
+// backend maps onto XML attrs (priceCash -> p, pricePoints -> pp, etc), NOT the raw attr names
+// above. Confirmed live: PUT { part: { priceCash: N }, reason } updates the `p` attribute.
+export type Cms2PartPatch = Partial<{
+  name: string;
+  model: string;
+  brand: string;
+  horsepowerDelta: number;
+  torqueDelta: number;
+  weightDelta: number;
+  priceCash: number;
+  pricePoints: number;
+  grade: string;
+}>;
+
+export type GlobalUnlocks = { lockedCatalogIds: number[]; lockedPartCategories: number[] };
+
 export const cms2Api = {
   categories: () => api.get<{ ok: true; categories: Cms2Category[] }>("/admin/cms2/categories"),
   parts: ({
@@ -211,7 +307,12 @@ export const cms2Api = {
     api.get<{ ok: true; items: Cms2PartRow[]; total: number; page: number; pageSize: number }>(
       `/admin/cms2/parts?query=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}&page=${page}&pageSize=${pageSize}`,
     ),
-  part: (pid: number) => api.get<{ ok: true; part: unknown }>(`/admin/cms2/parts/${pid}`),
+  part: (pid: number) => api.get<{ ok: true; part: Cms2PartDetail }>(`/admin/cms2/parts/${pid}`),
+  savePart: (pid: number, patch: Cms2PartPatch, reason: string) =>
+    api.put<{ ok: true; part: Cms2PartDetail }>(`/admin/cms2/parts/${pid}`, {
+      part: patch,
+      reason,
+    }),
   engines: ({ query = "" }: { query?: string } = {}) =>
     api.get<{ ok: true; items: Cms2EngineRow[]; total: number }>(
       `/admin/cms2/engines?query=${encodeURIComponent(query)}`,
@@ -220,6 +321,13 @@ export const cms2Api = {
     api.get<{ ok: true; engine: Cms2EngineDetail }>(`/admin/cms2/engines/${id}`),
   engineParts: (id: number) =>
     api.get<{ ok: true; parts: Cms2EnginePart[] }>(`/admin/cms2/engines/${id}/parts`),
+  // GET/PUT /admin/cms2/unlocks -- server-wide purchase locks (global-unlocks.mjs), enforced live
+  // in economy.mjs's buycar / parts.mjs's buypart+buyenginepart. Either list may be omitted from
+  // the PUT body to leave it unchanged (confirmed live: the backend merges, not replaces-with-
+  // undefined).
+  getUnlocks: () => api.get<{ ok: true; unlocks: GlobalUnlocks }>("/admin/cms2/unlocks"),
+  saveUnlocks: (patch: Partial<GlobalUnlocks>, reason: string) =>
+    api.put<{ ok: true; unlocks: GlobalUnlocks }>("/admin/cms2/unlocks", { ...patch, reason }),
 };
 
 // ---- Action approvals ----

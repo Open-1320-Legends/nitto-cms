@@ -366,3 +366,34 @@ export const approvalsApi = {
   deny: (id: string) =>
     api.post<{ ok: boolean }>(`/admin/action-approvals/${encodeURIComponent(id)}/deny`),
 };
+
+// ---- Challenges (features/challenges.mjs's CHALLENGE_CONFIG) ----
+// GET returns the live in-memory config (already merged with any prior override); PUT persists a
+// partial edit for one cadence and applies it live (no restart), the same in-place-mutation
+// pattern the tournament/security overrides use. Each cadence's "target" field has a DIFFERENT
+// real key name (confirmed live: daily.targetWins, weekly.targetTournamentWins,
+// monthly.targetCarWins) -- there is no generic "target" field across all three.
+export type ChallengeCadence = {
+  wording: string;
+  rewardCash: number;
+  rewardPoints: number;
+  rewardStreetCredit: number;
+  targetWins?: number;
+  targetTournamentWins?: number;
+  targetCarWins?: number;
+};
+
+export type ChallengeConfig = {
+  daily: ChallengeCadence;
+  weekly: ChallengeCadence;
+  monthly: ChallengeCadence;
+};
+
+export const challengesApi = {
+  get: () => api.get<{ ok: true; config: ChallengeConfig }>("/admin/challenges"),
+  save: (key: keyof ChallengeConfig, data: Partial<ChallengeCadence>) =>
+    api.put<{ ok: true; key: string; config: ChallengeCadence }>("/admin/challenges", {
+      key,
+      data,
+    }),
+};

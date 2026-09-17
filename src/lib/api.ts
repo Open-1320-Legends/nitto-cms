@@ -51,6 +51,7 @@ export const api = {
     }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
 // ---- admin auth ----
@@ -336,6 +337,49 @@ export const cms2Api = {
   getUnlocks: () => api.get<{ ok: true; unlocks: GlobalUnlocks }>("/admin/cms2/unlocks"),
   saveUnlocks: (patch: Partial<GlobalUnlocks>, reason: string) =>
     api.put<{ ok: true; unlocks: GlobalUnlocks }>("/admin/cms2/unlocks", { ...patch, reason }),
+  // GET/POST/DELETE /admin/cms2/tournaments -- real create/edit/delete for admin-authored
+  // "special conditions" tournaments (locked-to-car, NA-only, custom prize/schedule), merged live
+  // into the actual tournament schedule server-side (tournaments-shared.mjs). Built-in ids (< 10000)
+  // are start/stop/cancel-only (`custom: false`); admin-created ones (id >= 10000) are fully
+  // editable/deletable (`custom: true`).
+  getTournaments: () => api.get<{ ok: true; tournaments: Tournament[] }>("/admin/cms2/tournaments"),
+  saveTournament: (patch: TournamentPatch) =>
+    api.post<{ ok: true; tournament: Tournament }>("/admin/cms2/tournaments", patch),
+  deleteTournament: (id: number) =>
+    api.delete<{ ok: true; id: number }>(`/admin/cms2/tournaments/${id}`),
+  tournamentAction: (id: number, verb: "start" | "stop" | "cancel") =>
+    api.post<{ ok: true; id: number; verb: string }>(`/admin/cms2/tournaments/${id}/${verb}`),
+};
+
+export type Tournament = {
+  id: number;
+  title: string;
+  status: "closed" | "qualifying" | "scheduled";
+  startsAt: number;
+  entrants: number;
+  entryMoney: number;
+  entryPoints: number;
+  firstPrize: number;
+  secondPrize: number;
+  roundPrize: number;
+  bracketDialIn: boolean;
+  alwaysOpen: boolean;
+  dow?: number;
+  utcHour?: number;
+  qualifyMinutes?: number;
+  requirement: string;
+  description: string;
+  carNames: string[];
+  naturallyAspirated: boolean;
+  requiredLocation: string;
+  minStreetCredit?: number;
+  maxStreetCredit?: number;
+  custom: boolean;
+  overridable: boolean;
+};
+
+export type TournamentPatch = Partial<Omit<Tournament, "status" | "startsAt" | "entrants" | "custom" | "overridable">> & {
+  id?: number;
 };
 
 // ---- Action approvals ----

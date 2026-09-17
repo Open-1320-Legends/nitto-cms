@@ -41,8 +41,9 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Operations",
     items: [
       { label: "Unlocks", to: "/unlocks", code: "OP-11" },
-      { label: "Challenges", to: "/challenges", code: "OP-12" },
-      { label: "Approval Queue", to: "/approvals", code: "OP-13" },
+      { label: "Tournaments", to: "/tournaments", code: "OP-12" },
+      { label: "Challenges", to: "/challenges", code: "OP-13" },
+      { label: "Approval Queue", to: "/approvals", code: "OP-14" },
     ],
   },
 ];

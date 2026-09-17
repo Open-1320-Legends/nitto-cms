@@ -441,3 +441,31 @@ export const challengesApi = {
       data,
     }),
 };
+
+// ---- badges (per-account grant/revoke) ----
+export type BadgeCatalogEntry = { id: number; name: string; description: string };
+
+export type BadgeAccount = {
+  id: number;
+  username: string;
+  roleClass: number;
+  badges: number[];        // everything currently earned, including manual grants
+  manualBadges: number[];  // the subset that came from a manual grant (revocable here)
+};
+
+export const badgesApi = {
+  // GET /admin/badges -- the tooltip catalog (id/name/description), same data the game client's
+  // idMap.badges uses. Read-only; badge DEFINITIONS aren't editable, only per-account grants are.
+  catalog: () => api.get<{ ok: true; badges: BadgeCatalogEntry[] }>("/admin/badges"),
+  // GET /admin/accounts?query=... -- reused from the account admin surface; each row already
+  // carries `badges`/`manualBadges` (features/site/admin-api.mjs's serializeAccount).
+  searchAccounts: (query: string) =>
+    api.get<{ ok: true; count: number; accounts: BadgeAccount[] }>(
+      `/admin/accounts?query=${encodeURIComponent(query)}&limit=20`,
+    ),
+  // POST /admin/accounts/:id/badges {grant:[ids], revoke:[ids]} -- accountAction's "badges" case.
+  // Revoking only ever removes a MANUAL grant; a role/location/stat-earned badge has no revoke
+  // path here (it would just re-earn on the account's next getuser).
+  saveBadges: (accountId: number, patch: { grant?: number[]; revoke?: number[] }) =>
+    api.post<{ ok: true; account: BadgeAccount }>(`/admin/accounts/${accountId}/badges`, patch),
+};

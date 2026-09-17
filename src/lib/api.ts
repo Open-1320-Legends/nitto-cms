@@ -469,3 +469,41 @@ export const badgesApi = {
   saveBadges: (accountId: number, patch: { grant?: number[]; revoke?: number[] }) =>
     api.post<{ ok: true; account: BadgeAccount }>(`/admin/accounts/${accountId}/badges`, patch),
 };
+
+// ---- badge catalog (staff rename/reorder/reconnect) ----
+export type BadgeConnection = { type: "role" | "package" | "location" | "special"; value: string } | null;
+
+export type BadgeCatalogEntry2 = {
+  id: number;
+  name: string;
+  description: string;
+  order: number;
+  connection: BadgeConnection;
+};
+
+export type BadgeCatalogPatch = {
+  name?: string;
+  description?: string;
+  connection?: { type: "role" | "package" | "location" | "none"; value?: string } | null;
+  reason?: string;
+};
+
+export const badgeCatalogApi = {
+  // GET /admin/cms2/badges/catalog -- full admin view (name/description/order/connection) for
+  // every one of the 135 real, named badges (features/accounts/badges.mjs's getAdminBadgeCatalog).
+  get: () =>
+    api.get<{ ok: true; badges: BadgeCatalogEntry2[]; roleConnectionOptions: string[] }>(
+      "/admin/cms2/badges/catalog",
+    ),
+  // POST /admin/cms2/badges/catalog/:id -- rename, re-describe, and/or reconnect one badge.
+  // Omitted fields are left as-is; an empty name/description clears that override back to the
+  // hardcoded default; connection:null (or {type:"none"}) clears a reconnect back to default.
+  saveEntry: (id: number, patch: BadgeCatalogPatch) =>
+    api.post<{ ok: true; badge: BadgeCatalogEntry2 }>(`/admin/cms2/badges/catalog/${id}`, patch),
+  // DELETE /admin/cms2/badges/catalog/:id -- reset name/description/connection back to default.
+  resetEntry: (id: number) =>
+    api.delete<{ ok: true; badge: BadgeCatalogEntry2 }>(`/admin/cms2/badges/catalog/${id}`),
+  // POST /admin/cms2/badges/catalog/order -- full reorder, full replacement list of ids.
+  saveOrder: (order: number[]) =>
+    api.post<{ ok: true; badges: BadgeCatalogEntry2[] }>("/admin/cms2/badges/catalog/order", { order }),
+};

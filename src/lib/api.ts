@@ -51,6 +51,7 @@ export const api = {
     }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
 // ---- admin auth ----
@@ -336,6 +337,49 @@ export const cms2Api = {
   getUnlocks: () => api.get<{ ok: true; unlocks: GlobalUnlocks }>("/admin/cms2/unlocks"),
   saveUnlocks: (patch: Partial<GlobalUnlocks>, reason: string) =>
     api.put<{ ok: true; unlocks: GlobalUnlocks }>("/admin/cms2/unlocks", { ...patch, reason }),
+  // GET/POST/DELETE /admin/cms2/tournaments -- real create/edit/delete for admin-authored
+  // "special conditions" tournaments (locked-to-car, NA-only, custom prize/schedule), merged live
+  // into the actual tournament schedule server-side (tournaments-shared.mjs). Built-in ids (< 10000)
+  // are start/stop/cancel-only (`custom: false`); admin-created ones (id >= 10000) are fully
+  // editable/deletable (`custom: true`).
+  getTournaments: () => api.get<{ ok: true; tournaments: Tournament[] }>("/admin/cms2/tournaments"),
+  saveTournament: (patch: TournamentPatch) =>
+    api.post<{ ok: true; tournament: Tournament }>("/admin/cms2/tournaments", patch),
+  deleteTournament: (id: number) =>
+    api.delete<{ ok: true; id: number }>(`/admin/cms2/tournaments/${id}`),
+  tournamentAction: (id: number, verb: "start" | "stop" | "cancel") =>
+    api.post<{ ok: true; id: number; verb: string }>(`/admin/cms2/tournaments/${id}/${verb}`),
+};
+
+export type Tournament = {
+  id: number;
+  title: string;
+  status: "closed" | "qualifying" | "scheduled";
+  startsAt: number;
+  entrants: number;
+  entryMoney: number;
+  entryPoints: number;
+  firstPrize: number;
+  secondPrize: number;
+  roundPrize: number;
+  bracketDialIn: boolean;
+  alwaysOpen: boolean;
+  dow?: number;
+  utcHour?: number;
+  qualifyMinutes?: number;
+  requirement: string;
+  description: string;
+  carNames: string[];
+  naturallyAspirated: boolean;
+  requiredLocation: string;
+  minStreetCredit?: number;
+  maxStreetCredit?: number;
+  custom: boolean;
+  overridable: boolean;
+};
+
+export type TournamentPatch = Partial<Omit<Tournament, "status" | "startsAt" | "entrants" | "custom" | "overridable">> & {
+  id?: number;
 };
 
 // ---- Action approvals ----
@@ -396,4 +440,70 @@ export const challengesApi = {
       key,
       data,
     }),
+};
+
+// ---- badges (per-account grant/revoke) ----
+export type BadgeCatalogEntry = { id: number; name: string; description: string };
+
+export type BadgeAccount = {
+  id: number;
+  username: string;
+  roleClass: number;
+  badges: number[];        // everything currently earned, including manual grants
+  manualBadges: number[];  // the subset that came from a manual grant (revocable here)
+};
+
+export const badgesApi = {
+  // GET /admin/badges -- the tooltip catalog (id/name/description), same data the game client's
+  // idMap.badges uses. Read-only; badge DEFINITIONS aren't editable, only per-account grants are.
+  catalog: () => api.get<{ ok: true; badges: BadgeCatalogEntry[] }>("/admin/badges"),
+  // GET /admin/accounts?query=... -- reused from the account admin surface; each row already
+  // carries `badges`/`manualBadges` (features/site/admin-api.mjs's serializeAccount).
+  searchAccounts: (query: string) =>
+    api.get<{ ok: true; count: number; accounts: BadgeAccount[] }>(
+      `/admin/accounts?query=${encodeURIComponent(query)}&limit=20`,
+    ),
+  // POST /admin/accounts/:id/badges {grant:[ids], revoke:[ids]} -- accountAction's "badges" case.
+  // Revoking only ever removes a MANUAL grant; a role/location/stat-earned badge has no revoke
+  // path here (it would just re-earn on the account's next getuser).
+  saveBadges: (accountId: number, patch: { grant?: number[]; revoke?: number[] }) =>
+    api.post<{ ok: true; account: BadgeAccount }>(`/admin/accounts/${accountId}/badges`, patch),
+};
+
+// ---- badge catalog (staff rename/reorder/reconnect) ----
+export type BadgeConnection = { type: "role" | "package" | "location" | "special"; value: string } | null;
+
+export type BadgeCatalogEntry2 = {
+  id: number;
+  name: string;
+  description: string;
+  order: number;
+  connection: BadgeConnection;
+};
+
+export type BadgeCatalogPatch = {
+  name?: string;
+  description?: string;
+  connection?: { type: "role" | "package" | "location" | "none"; value?: string } | null;
+  reason?: string;
+};
+
+export const badgeCatalogApi = {
+  // GET /admin/cms2/badges/catalog -- full admin view (name/description/order/connection) for
+  // every one of the 135 real, named badges (features/accounts/badges.mjs's getAdminBadgeCatalog).
+  get: () =>
+    api.get<{ ok: true; badges: BadgeCatalogEntry2[]; roleConnectionOptions: string[] }>(
+      "/admin/cms2/badges/catalog",
+    ),
+  // POST /admin/cms2/badges/catalog/:id -- rename, re-describe, and/or reconnect one badge.
+  // Omitted fields are left as-is; an empty name/description clears that override back to the
+  // hardcoded default; connection:null (or {type:"none"}) clears a reconnect back to default.
+  saveEntry: (id: number, patch: BadgeCatalogPatch) =>
+    api.post<{ ok: true; badge: BadgeCatalogEntry2 }>(`/admin/cms2/badges/catalog/${id}`, patch),
+  // DELETE /admin/cms2/badges/catalog/:id -- reset name/description/connection back to default.
+  resetEntry: (id: number) =>
+    api.delete<{ ok: true; badge: BadgeCatalogEntry2 }>(`/admin/cms2/badges/catalog/${id}`),
+  // POST /admin/cms2/badges/catalog/order -- full reorder, full replacement list of ids.
+  saveOrder: (order: number[]) =>
+    api.post<{ ok: true; badges: BadgeCatalogEntry2[] }>("/admin/cms2/badges/catalog/order", { order }),
 };
